@@ -9,7 +9,10 @@
 
 using namespace std;
 
-Chip8::Chip8(){}
+Chip8::Chip8(){
+	init();
+}
+
 Chip8::~Chip8(){}
 
 
@@ -23,7 +26,7 @@ void Chip8::init() {
 
 void Chip8::load(const char *path) {
 	
-	printf("Loading file");
+	printf("Loading file\n");
 	
 	FILE* rom = fopen(path, "rb");
 	if (rom == NULL) {
@@ -47,7 +50,6 @@ void Chip8::load(const char *path) {
 	
 	for(int i = 0; i < romSize; i++){
 		memory[512 + i] = (uint8_t)romBuffer[i];
-		cout << unsigned( (uint8_t)romBuffer[i] ) << endl;
 	}
 	
 	fclose(rom);
