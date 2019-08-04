@@ -1,7 +1,5 @@
 #include<iostream>
 
-#include "SDL2/SDL.h"
-
 #include "chip8.h"
 #include "screen.h"
 #include "SDL2/SDL.h"
@@ -20,12 +18,15 @@ int main(int argc, char **argv){
 	int width = 500;
 	int height = 1000;
 	
-	screen.createWindow(500, 1000);
+	//screen.createWindow(500, 1000);
 		
-
+	
+	//Load ROM in the chip8 CPU
 	c.load(argv[1]);	
 	
-	cout << SDLK_1 << endl;	
+	//Start the emulation
+	c.emulate();
+		
 
 	return 0;
 }
