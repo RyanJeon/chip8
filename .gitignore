@@ -1,3 +1,4 @@
 *.out
 *.swp
 *.ch8
+/include
