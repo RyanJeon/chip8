@@ -189,29 +189,45 @@ void Chip8::execute(){
 					else{
 						v[0xF] = 0;
 					}
+					pc += 2;
 					break;
 				//0x8xyE: Vx << 1
 				case 0x000E:
 					//Check most significant bit, carry if it is 1.
 					if(v[(opcode & 0x0F00) >> 8] >> 7 == 0x1) v[0xF] = 0x1;
 					v[(opcode & 0x0F00) >> 8] <<= 1;
+					pc += 2;
 					break;
 				default:
 					cerr << "(ERROR) UNKNOWN OPCODE: " << result << endl;
+					exit(3);
 					break;
 			}
 			break;
-		//0x9xxx
+		//0x9xy0: skip next instruction if Vx != Vy
 		case 0x9000:
+			if(v[(opcode & 0x0F00) >> 8] != v[(opcode & 0x00F0) >> 4] ){
+				pc += 4;
+			}
+			else{
+				pc += 2;
+			}
 			break;
-		//0xAxxx
+		//0xAnnn : ind set to nnn
 		case 0xA000:
+			ind = opcode & 0x0FFF;
+			pc += 2;
 			break;
-		//0xBxxx
+		//0xBnnn : jump to location nnn + V[0]
 		case 0xB000:
+			pc = (opcode & 0x0FFF) + v[0];
 			break;
-		//0xCxxx
+		//0xCxkk : Random byte & kk
 		case 0xC000:
+			//masking?
+			int randomByte = rand();
+			v[(opcode * 0x0F00) >> 8] = randomByte & (opcode & 0x00FF);
+			pc += 2; 
 			break;
 		//0xDxyh x = x coordinate, y = y coordinate, h = height
 		case 0xD000:
