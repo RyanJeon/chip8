@@ -72,6 +72,22 @@ void Chip8::execute(){
 	switch(opcode & 0xF000 ){
 		//0x0xxx
 		case 0x0000:
+			switch(opcode & 0x00FF){
+				//00E0 : CLS clear screan
+				case 0x00E0:
+					for(int pixel = 0 ; pixel < 2048; pixel++) graphics[pixel] = 0;
+					draw = true;
+					pc += 2;
+					break;
+				//Return from subroutine
+				case 0x00EE:
+					//pop rax
+					//jmp rax
+					sp--; //Decrease stack pointer
+					pc = stack[sp]; //Return address
+					pc += 2;
+					break;
+			}
 			break;
 		//0x1xxx: jump to 0x0nnn
 		case 0x1000:
@@ -225,8 +241,7 @@ void Chip8::execute(){
 		//0xCxkk : Random byte & kk
 		case 0xC000:
 			//masking?
-			int randomByte = rand();
-			v[(opcode * 0x0F00) >> 8] = randomByte & (opcode & 0x00FF);
+			v[(opcode * 0x0F00) >> 8] = rand()  & (opcode & 0x00FF);
 			pc += 2; 
 			break;
 		//0xDxyh x = x coordinate, y = y coordinate, h = height
@@ -242,11 +257,21 @@ void Chip8::execute(){
 			//Loop start for y line
 			for(int yLine = 0; yLine < height; yLine++){
 				//Width of 8
-				pixel = memory[ind + yLine]; 
-				for(int xLine = 0; x < 8; xLine++){
-					cout << "Print Graphic in pixel" << pixel << endl; 
+				pixel = memory[ind + yLine];
+				
+				//Read 8 bits of pixel data. 
+				//0x80 = 1000 0000
+				//pixel & 0x80 will give you the first bit of pixel on that row
+				//to get the next pixel 0x80 >> 1 = 0100 0000 so on.... 
+				for(int xLine = 0; xLine < 8; xLine++){
+					if( ((0x80 >> xLine) & pixel) != 0 ) {
+						graphics[xLine + x + ((y + yLine) * 64) ] ^= 1;
+					// cout << "Print Graphic in pixel" << pixel << endl; 
+					}
 				}		
 			}
+			draw = true;
+			pc += 2;
 			break;
 		}
 		//0xExxx
