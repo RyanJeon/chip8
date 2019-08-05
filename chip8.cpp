@@ -1,5 +1,4 @@
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <iostream>
 #include <iomanip>
@@ -116,33 +115,90 @@ void Chip8::execute(){
 		//0x6xkk: set Vx = kk
 		case 0x6000:
 			v[(opcode & 0x0F00) >> 8] = (opcode & 0x00FF);
+			pc += 2;
 			break;
 		//0x7xkk: set Vx = Vx + kk
 		case 0x7000:
 			v[(opcode & 0x0F00) >> 8] += (opcode & 0x00FF);
+			pc += 2;
 			break;
 		//0x8xyn 
 		case 0x8000:
 			//Check the last 4 bits for instruction type
 			switch( opcode & 0x000F ){
+				//0x8xy0: Vx = Vy
 				case 0x0000:
-					break
+					v[(opcode & 0x0F00) >> 8] = v[(opcode & 0x00F0) >> 4];
+					pc += 2;
+					break;
+				//0x8xy1: Vx |= Vy
 				case 0x0001:
-					break
+					v[(opcode & 0x0F00) >> 8] |= v[(opcode & 0x00F0) >> 4];
+					pc += 2;
+					break;
+				//0x8xy2: Vx &= Vy
 				case 0x0002:
-					break
+					v[(opcode & 0x0F00) >> 8] &= v[(opcode & 0x00F0) >> 4];
+					pc += 2;
+					break;
+				//0x8xy3: Vx ^= Vy
 				case 0x0003:
-					break
+					v[(opcode & 0x0F00) >> 8] ^= v[(opcode & 0x00F0) >> 4];
+					pc += 2; 
+					break;
+				//0x8xy4: Vx += Vy
 				case 0x0004:
-					break
+					//Carry over happens when the value goes over 0xFF (Each register
+					//is 8-bit) so, if Vy + Vx > 0xFF, carry over happens.
+					//   Vy > 0xFF - Vx
+					if(v[(opcode & 0x00F0) >> 4] > (0xFF - v[(opcode & 0x0F00) >> 8])){
+						v[0xF] = 1;
+					}
+					else{
+						v[0xF] = 0;
+					}
+					v[(opcode & 0x0F00) >> 8] += v[(opcode & 0x00F0) >> 4];
+					pc += 2;
+					break;
+				//0x8xy5: Vx -= Vy
 				case 0x0005:
-					break
+					//Check if borrow happens. Borrow happens when Vx -= Vy becomes 0
+					//if Vy > Vx
+					if(v[(opcode & 0x00F0) >> 4] > v[(opcode & 0x0F00) >> 8]){
+						//Borrow
+						v[0xF] = 0;
+					}
+					else{
+						v[0xF] = 1;
+					}
+					v[(opcode & 0x0F00) >> 8] -= v[(opcode & 0x00F0) >> 4];
+					pc += 2;
+					break;
+				//0x8xy6: Vx >> 1
+				//Carry over if the least significant bit is 1. 
 				case 0x0006:
-					break
-				case 0x0007:
-					break
+					if(v[(opcode & 0x0F00) >> 8] & 0x1) v[0xF] = 0x1;
+					v[(opcode & 0x0F00) >> 8] >>= 1;
+					pc += 2;
+					break;
+				//0x8xy7: Vx = Vy - Vx
+				case 0x0007:	
+					if(v[(opcode & 0x00F0) >> 4] > v[(opcode & 0x0F00) >> 8]){
+						v[0xF] = 1;
+					}
+					else{
+						v[0xF] = 0;
+					}
+					break;
+				//0x8xyE: Vx << 1
 				case 0x000E:
-					break
+					//Check most significant bit, carry if it is 1.
+					if(v[(opcode & 0x0F00) >> 8] >> 7 == 0x1) v[0xF] = 0x1;
+					v[(opcode & 0x0F00) >> 8] <<= 1;
+					break;
+				default:
+					cerr << "(ERROR) UNKNOWN OPCODE: " << result << endl;
+					break;
 			}
 			break;
 		//0x9xxx
