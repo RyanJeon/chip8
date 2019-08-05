@@ -1,5 +1,7 @@
 
 #include <stdlib.h>
+#include <chrono> 
+#include <thread>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
@@ -25,8 +27,11 @@ void Chip8::init() {
 }
 
 
-void Chip8::load(const char *path) {
-	
+void Chip8::load(const char *path, Screen *s) {
+	screen = s;
+	if(screen == NULL) {
+		cerr << "Screen failed to initialize" << endl;
+	}
 	printf("Loading file\n");
 	
 	FILE* rom = fopen(path, "rb");
@@ -295,6 +300,19 @@ void Chip8::emulate(){
 	//Execute all instructions in ROM	
 	while(pc - 0x200 < romSize){
 		execute();
+		
+		uint32_t pixels[2048]; //temp pixel buffer
+		//Do we need to draw? :)
+		if (draw) {
+			//yes we do!
+            		for (int i = 0; i < 2048; ++i) {
+                		uint8_t pixel = graphics[i];
+                		pixels[i] = (0x00FFFFFF * pixel) | 0xFF000000;
+            		}
+			cout << "DRAWING TIME" << endl;
+			screen->renderSprite(pixels);	
+		}
+		 std::this_thread::sleep_for(std::chrono::microseconds(1200));
 	}
 }
 

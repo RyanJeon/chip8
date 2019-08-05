@@ -40,6 +40,18 @@ void Screen::createRenderer(const int index){
 		cerr << "SDL_CreateRenderer Error: " << SDL_GetError() << endl;
 		SDL_Quit();
 	}
-
+	
+	printf("Creating Texture\n");
+	texture = SDL_CreateTexture(ren, SDL_PIXELFORMAT_ARGB8888, SDL_TEXTUREACCESS_STREAMING, 64, 32);
 }
 
+void Screen::renderSprite(uint32_t sprite[]){
+	    printf("Rendering Sprite");
+	    // Update SDL texture
+            SDL_UpdateTexture(texture, NULL, sprite, 64 * sizeof(Uint32));
+            
+	    // Clear screen and render
+            SDL_RenderClear(ren);
+            SDL_RenderCopy(ren, texture, NULL, NULL);
+            SDL_RenderPresent(ren);
+}

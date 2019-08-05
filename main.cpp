@@ -18,11 +18,11 @@ int main(int argc, char **argv){
 	int width = 500;
 	int height = 1000;
 	
-	//screen.createWindow(500, 1000);
+	screen.createWindow(500, 1000);
 		
 	
 	//Load ROM in the chip8 CPU
-	c.load(argv[1]);	
+	c.load(argv[1], &screen);	
 	
 	//Start the emulation
 	c.emulate();

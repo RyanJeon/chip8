@@ -2,6 +2,8 @@
 
 #include <stdint.h>
 
+#include "screen.h"
+
 class Chip8 {
 	private:
 		uint16_t pc;		//Program Counter
@@ -17,6 +19,8 @@ class Chip8 {
 		uint16_t stack[16];	//Stack
 		uint16_t memory[4096];	//Memory (4kb)
 		
+		Screen *screen;		
+
 		void execute();	
 	
 	public:
@@ -28,5 +32,5 @@ class Chip8 {
 		
 		void init();				//Initialize CPU
 		void emulate();
-		void load(const char *path);
+		void load(const char *path, Screen *s);
 };
