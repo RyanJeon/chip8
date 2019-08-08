@@ -21,8 +21,8 @@ clean:
 	rm *.o && rm $(EXE)
 
 build:
-	g++ main.cpp chip8.cpp screen.cpp
+	g++ main.cpp chip8.cpp screen.cpp -o chip8 -I include -l SDL2-2.0.0
 
 run:
 	g++ main.cpp chip8.cpp screen.cpp -o chip8 -I include -l SDL2-2.0.0
-	./chip8 clock.ch8
+	./chip8 BLINKY

@@ -1,8 +1,10 @@
-#include <stdint.h>
-#include "SDL2/SDL.h"
 
 #ifndef screen_h
 #define screen_h
+
+#include <stdint.h>
+#include "SDL2/SDL.h"
+
 class Screen {
 	private:
 		SDL_Window *win;	//Main window
@@ -16,5 +18,6 @@ class Screen {
 		void createWindow(const int width, const int height);
 		void createRenderer(const int index);
 		void renderSprite(uint32_t sprite[]);
+		void eventLoop();
 };
 #endif

@@ -15,11 +15,11 @@ int main(int argc, char **argv){
 	Chip8 c = Chip8();
 	Screen screen = Screen();
 
-	int width = 500;
-	int height = 1000;
+	int width = 1024;
+	int height = 512;
 	
-	screen.createWindow(500, 1000);
-		
+	screen.createWindow(width, height);
+	screen.createRenderer(-1);		
 	
 	//Load ROM in the chip8 CPU
 	c.load(argv[1], &screen);	

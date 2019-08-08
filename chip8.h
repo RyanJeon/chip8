@@ -1,7 +1,7 @@
-
+#ifndef CHIP8_H
+#define CHIP8_H
 
 #include <stdint.h>
-
 #include "screen.h"
 
 class Chip8 {
@@ -10,7 +10,7 @@ class Chip8 {
 		uint16_t sp;		//Stack Pointer
 		uint16_t ind;		//Index Register
 		uint16_t opcode;	//Current Opcode		
-		uint16_t romSize;	//ROM size	
+		long romSize;	//ROM size	
 		
 		uint16_t delayTimer;
 		uint16_t soundTimer;
@@ -28,9 +28,11 @@ class Chip8 {
 		~Chip8();
 		
 		bool draw;		//Draw flag
-		uint8_t  graphics[64 * 32];              // Graphics buffer
-		
+		uint8_t  graphics[64 * 32];              // Graphics buffer (64 x 32) display
+		uint8_t  key[16];		
 		void init();				//Initialize CPU
 		void emulate();
 		void load(const char *path, Screen *s);
 };
+
+#endif

@@ -12,6 +12,27 @@
 
 using namespace std;
 
+unsigned char chip8_fontset[80] =
+{
+    0xF0, 0x90, 0x90, 0x90, 0xF0, //0
+    0x20, 0x60, 0x20, 0x20, 0x70, //1
+    0xF0, 0x10, 0xF0, 0x80, 0xF0, //2
+    0xF0, 0x10, 0xF0, 0x10, 0xF0, //3
+    0x90, 0x90, 0xF0, 0x10, 0x10, //4
+    0xF0, 0x80, 0xF0, 0x10, 0xF0, //5
+    0xF0, 0x80, 0xF0, 0x90, 0xF0, //6
+    0xF0, 0x10, 0x20, 0x40, 0x40, //7
+    0xF0, 0x90, 0xF0, 0x90, 0xF0, //8
+    0xF0, 0x90, 0xF0, 0x10, 0xF0, //9
+    0xF0, 0x90, 0xF0, 0x90, 0x90, //A
+    0xE0, 0x90, 0xE0, 0x90, 0xE0, //B
+    0xF0, 0x80, 0x80, 0x80, 0xF0, //C
+    0xE0, 0x90, 0x90, 0x90, 0xE0, //D
+    0xF0, 0x80, 0xF0, 0x80, 0xF0, //E
+    0xF0, 0x80, 0xF0, 0x80, 0x80  //F
+};
+
+
 Chip8::Chip8(){
 	init();
 }
@@ -20,10 +41,40 @@ Chip8::~Chip8(){}
 
 
 void Chip8::init() {
+	cout << "Initializing the CPU" << endl;
 	pc	= 0x200;	//512 
 	opcode	= 0;
 	ind	= 0;
 	sp	= 0;
+	printf("PC: %X\n", pc);
+
+    // Clear the display
+    for (int i = 0; i < 2048; ++i) {
+        graphics[i] = 0;
+    }
+
+    // Clear the stack, keypad, and V registers
+    for (int i = 0; i < 16; ++i) {
+        stack[i]    = 0;
+        //key[i]      = 0;
+        v[i]        = 0;
+    }
+
+    // Clear memory
+    for (int i = 0; i < 4096; ++i) {
+        memory[i] = 0;
+    }
+
+    delayTimer = 0;
+    soundTimer = 0;
+
+    // Load font set into memory
+    for (int i = 0; i < 80; ++i) {
+        memory[i] = chip8_fontset[i];
+    }
+
+     srand (time(NULL));
+
 }
 
 
@@ -53,9 +104,14 @@ void Chip8::load(const char *path, Screen *s) {
 	fread(romBuffer, sizeof(char), (size_t)romSize, rom);
 	
 	
-	
-	for(int i = 0; i < romSize; i++){
-		memory[512 + i] = (uint8_t)romBuffer[i];
+	if((4096-512) > romSize){	
+		for(int i = 0; i < romSize; i++){
+			memory[512 + i] = (uint8_t)romBuffer[i];
+		}
+	}
+	else{
+		std::cerr << "ROM too large" << endl;
+		exit(3);
 	}
 	
 	fclose(rom);
@@ -71,7 +127,7 @@ void Chip8::execute(){
 	stringstream stream;
 	stream << std::hex << opcode;
 	std::string result( stream.str() );
-	// cout << result << endl;
+	cout << result << endl;
 	
 	//Check the first 4 bits 0 - F?
 	switch(opcode & 0xF000 ){
@@ -80,7 +136,9 @@ void Chip8::execute(){
 			switch(opcode & 0x00FF){
 				//00E0 : CLS clear screan
 				case 0x00E0:
-					for(int pixel = 0 ; pixel < 2048; pixel++) graphics[pixel] = 0;
+					for(int pixel = 0 ; pixel < 2048; ++pixel) {
+						graphics[pixel] = 0;
+					}
 					draw = true;
 					pc += 2;
 					break;
@@ -91,6 +149,7 @@ void Chip8::execute(){
 					sp--; //Decrease stack pointer
 					pc = stack[sp]; //Return address
 					pc += 2;
+					// cout << "0x00EE" << endl;
 					break;
 			}
 			break;
@@ -126,7 +185,7 @@ void Chip8::execute(){
 			break;
 		//0x5xy0: Vx == Vy then skip the instruction
 		case 0x5000:
-			if(v[(opcode & 0x0F00) >> 8] == v[(opcode & 0x00F0)]){
+			if(v[(opcode & 0x0F00) >> 8] == v[(opcode & 0x00F0 >> 4)]){
 				pc += 4;
 			}
 			else{
@@ -142,6 +201,7 @@ void Chip8::execute(){
 		case 0x7000:
 			v[(opcode & 0x0F00) >> 8] += (opcode & 0x00FF);
 			pc += 2;
+			cout << "7xkkk" << endl;
 			break;
 		//0x8xyn 
 		case 0x8000:
@@ -167,18 +227,19 @@ void Chip8::execute(){
 					v[(opcode & 0x0F00) >> 8] ^= v[(opcode & 0x00F0) >> 4];
 					pc += 2; 
 					break;
-				//0x8xy4: Vx += Vy
+				//0x8xy4: Vx += Vy CHECK
 				case 0x0004:
 					//Carry over happens when the value goes over 0xFF (Each register
 					//is 8-bit) so, if Vy + Vx > 0xFF, carry over happens.
-					//   Vy > 0xFF - Vx
+					//   Vy > 0xFF - V
+					
+					v[(opcode & 0x0F00) >> 8] += v[(opcode & 0x00F0) >> 4];
 					if(v[(opcode & 0x00F0) >> 4] > (0xFF - v[(opcode & 0x0F00) >> 8])){
 						v[0xF] = 1;
 					}
 					else{
 						v[0xF] = 0;
 					}
-					v[(opcode & 0x0F00) >> 8] += v[(opcode & 0x00F0) >> 4];
 					pc += 2;
 					break;
 				//0x8xy5: Vx -= Vy
@@ -198,26 +259,31 @@ void Chip8::execute(){
 				//0x8xy6: Vx >> 1
 				//Carry over if the least significant bit is 1. 
 				case 0x0006:
-					if(v[(opcode & 0x0F00) >> 8] & 0x1) v[0xF] = 0x1;
+					// if(v[(opcode & 0x0F00) >> 8] & 0x1) v[0xF] = 0x1;
+					v[0xF] = v[(opcode & 0x0F00) >> 8] & 0x1;
 					v[(opcode & 0x0F00) >> 8] >>= 1;
 					pc += 2;
+					//cout << "8xy6" << endl;
 					break;
 				//0x8xy7: Vx = Vy - Vx
 				case 0x0007:	
-					if(v[(opcode & 0x00F0) >> 4] > v[(opcode & 0x0F00) >> 8]){
-						v[0xF] = 1;
-					}
-					else{
+					if(v[(opcode & 0x00F0) >> 4] < v[(opcode & 0x0F00) >> 8]){
 						v[0xF] = 0;
 					}
+					else{
+						v[0xF] = 1;
+					}
+					v[(opcode & 0x0F00) >> 8] = v[(opcode & 0x00F0) >> 4] - v[(opcode & 0x0F00) >> 8];	
 					pc += 2;
 					break;
 				//0x8xyE: Vx << 1
 				case 0x000E:
 					//Check most significant bit, carry if it is 1.
-					if(v[(opcode & 0x0F00) >> 8] >> 7 == 0x1) v[0xF] = 0x1;
+					//if(v[(opcode & 0x0F00) >> 8] >> 7 == 0x1) v[0xF] = 0x1;
+					v[0xF] = v[(opcode & 0x0F00) >> 8] >> 7;
 					v[(opcode & 0x0F00) >> 8] <<= 1;
 					pc += 2;
+					//cout << "8xyE" << endl;
 					break;
 				default:
 					cerr << "(ERROR) UNKNOWN OPCODE: " << result << endl;
@@ -246,30 +312,34 @@ void Chip8::execute(){
 		//0xCxkk : Random byte & kk
 		case 0xC000:
 			//masking?
-			v[(opcode * 0x0F00) >> 8] = rand()  & (opcode & 0x00FF);
+			v[(opcode * 0x0F00) >> 8] = (rand() % (0xFF + 1))  & (opcode & 0x00FF);
 			pc += 2; 
 			break;
 		//0xDxyh x = x coordinate, y = y coordinate, h = height
 		case 0xD000:
 		{
 			//X and Y coordinate for the pixels
-			uint16_t x = v[(opcode & 0x0F00 >> 8)];
-			uint16_t y = v[(opcode & 0x00F0 >> 4)];
-			uint16_t height = opcode & 0x000F;
+			unsigned short x = v[(opcode & 0x0F00) >> 8];
+			unsigned short y = v[(opcode & 0x00F0) >> 4];
+			unsigned short height = opcode & 0x000F;
 			
-
-			uint16_t pixel;
+			v[0xF] = 0;
+			unsigned short pixel;
 			//Loop start for y line
 			for(int yLine = 0; yLine < height; yLine++){
 				//Width of 8
 				pixel = memory[ind + yLine];
-				
 				//Read 8 bits of pixel data. 
 				//0x80 = 1000 0000
 				//pixel & 0x80 will give you the first bit of pixel on that row
 				//to get the next pixel 0x80 >> 1 = 0100 0000 so on.... 
 				for(int xLine = 0; xLine < 8; xLine++){
 					if( ((0x80 >> xLine) & pixel) != 0 ) {
+						if(graphics[(xLine + x + ((yLine + y) * 64))] == 1) v[0xF] = 1;
+						//Give unique id to each pixel
+						//chip8 uses 64x32 pixel display
+						//every row has 64 pixels, to give 
+						//unique IDs, (y + yLine) * 64
 						graphics[xLine + x + ((y + yLine) * 64) ] ^= 1;
 					// cout << "Print Graphic in pixel" << pixel << endl; 
 					}
@@ -277,19 +347,77 @@ void Chip8::execute(){
 			}
 			draw = true;
 			pc += 2;
+			// cout << "Draw Set Up Complete" << endl;
 			break;
 		}
 		//0xExxx
 		case 0xE000:
+			cout << "E000" << endl;
 			break;
 		//0xFxxx
 		case 0xF000:
-			cout << result << endl;
-			break;
+			switch(opcode & 0x00FF){
+				case 0x0007:
+					v[(opcode & 0x0F00) >> 8] = delayTimer;
+					pc += 2;
+					break;
+				case 0x000A:
+				{
+					bool keyPressed = false;
+					
+					cout << "FxxA" << endl;
+				}
+					break;
+				case 0x0018:
+					soundTimer = v[(opcode & 0x0F00) >> 8];
+					pc += 2;
+					break;
+				case 0x001E:
+					if(ind + v[(opcode & 0x0F00) >> 8] > 0xFFF){
+						v[0xF] = 1;
+					}
+					else{
+						v[0xF] = 0;
+					}
+					ind += v[(opcode & 0x0F00) >> 8];
+					pc += 2;
+					break;
+				case 0x0029:
+					ind = v[(opcode * 0x0F00) >> 8] * 0x5;
+					pc += 2;
+					break;
+				case 0x0033:
+	                		memory[ind]     = v[(opcode & 0x0F00) >> 8] / 100;
+        	            		memory[ind + 1] = (v[(opcode & 0x0F00) >> 8] / 10) % 10;
+                	    		memory[ind + 2] = v[(opcode & 0x0F00) >> 8] % 10;
+                   	 		pc += 2;
+					break;
+				case 0x0055:
+					for (int i = 0; i <= ((opcode & 0x0F00) >> 8); ++i){
+                        			memory[ind + i] = v[i];
+					}
+                    			// On the original interpreter, when the
+                    			// operation is done, I = I + X + 1.
+                    			ind += ((opcode & 0x0F00) >> 8) + 1;
+                   			pc += 2;
+					break;
+				case 0x0065:
+					for(int i = 0; i <= ((opcode & 0x0F00) >> 8); i++){
+						v[i] = memory[ind + i];
+					}
+					ind += ((opcode & 0x0F00) >> 8) + 1;
+					pc += 2;
+			//		cout << "0xFx365 Executed" << endl;
+					break;
+				 default:
+                    			printf ("Unknown opcode [0xF000]: 0x%X\n", opcode);
+			}	
+		break;
+		default:
+			printf("Unknown opcode: 0x%X\n", opcode);			
+			exit(3);
 	}
-	
-	//Increment program counter
-	pc += 2;
+	cout << result << " executed" << endl;
 }
 
 //Emulate the full ROM
@@ -297,22 +425,32 @@ void Chip8::emulate(){
 	cout << "Starting the emulation process.." << endl;
 	cout << "ROM Size: " << romSize << endl;	
 	
+	uint32_t pixels[2048]; //temp pixel buffer
+	uint32_t ctr = 0;
 	//Execute all instructions in ROM	
-	while(pc - 0x200 < romSize){
+	while(true){
 		execute();
 		
-		uint32_t pixels[2048]; //temp pixel buffer
+		//Run the event loop on the screen
+		screen->eventLoop();
+		cout << "Event Loop Done " << ctr << endl;
 		//Do we need to draw? :)
 		if (draw) {
+			cout << "We Need To Draw: " << ctr << endl;
 			//yes we do!
+			cout << "DRAW START " << ctr << endl;
             		for (int i = 0; i < 2048; ++i) {
                 		uint8_t pixel = graphics[i];
-                		pixels[i] = (0x00FFFFFF * pixel) | 0xFF000000;
-            		}
-			cout << "DRAWING TIME" << endl;
+          	      		pixels[i] = (0x00FFFFFF * pixel) | 0xFF000000;
+            			// cout << pixels[i];
+			}
+			cout << "DRAWING TIME: " << ctr << endl;
 			screen->renderSprite(pixels);	
+			draw = false;
 		}
-		 std::this_thread::sleep_for(std::chrono::microseconds(1200));
+		std::this_thread::sleep_for(std::chrono::microseconds(1200));
+		cout << "One loop done " << ctr << endl;
+		ctr++;
 	}
 }
 
