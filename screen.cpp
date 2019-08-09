@@ -68,7 +68,7 @@ void Screen::eventLoop(){
 		if (e.key.keysym.sym == SDLK_ESCAPE) exit(0);		
 
 	}
-	cout << "Event Loop End" << endl;
+
 }
 
 

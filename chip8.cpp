@@ -12,7 +12,7 @@
 
 using namespace std;
 
-unsigned char chip8_fontset[80] =
+unsigned char FONT[80] =
 {
     0xF0, 0x90, 0x90, 0x90, 0xF0, //0
     0x20, 0x60, 0x20, 0x20, 0x70, //1
@@ -42,10 +42,16 @@ Chip8::~Chip8(){}
 
 void Chip8::init() {
 	cout << "Initializing the CPU" << endl;
+
+	//Initialize initial values
 	pc	= 0x200;	//512 
 	opcode	= 0;
 	ind	= 0;
 	sp	= 0;
+	delayTimer = 0;
+    soundTimer = 0;
+
+	//Current program counter
 	printf("PC: %X\n", pc);
 
     // Clear the display
@@ -56,7 +62,7 @@ void Chip8::init() {
     // Clear the stack, keypad, and V registers
     for (int i = 0; i < 16; ++i) {
         stack[i]    = 0;
-        //key[i]      = 0;
+        key[i]      = 0;
         v[i]        = 0;
     }
 
@@ -65,15 +71,14 @@ void Chip8::init() {
         memory[i] = 0;
     }
 
-    delayTimer = 0;
-    soundTimer = 0;
 
     // Load font set into memory
     for (int i = 0; i < 80; ++i) {
-        memory[i] = chip8_fontset[i];
+        memory[i] = FONT[i];
     }
 
-     srand (time(NULL));
+
+    srand (time(NULL)); //seed 
 
 }
 
@@ -136,9 +141,7 @@ void Chip8::execute(){
 			switch(opcode & 0x00FF){
 				//00E0 : CLS clear screan
 				case 0x00E0:
-					for(int pixel = 0 ; pixel < 2048; ++pixel) {
-						graphics[pixel] = 0;
-					}
+					for(int pixel = 0 ; pixel < 2048; pixel++) graphics[pixel] = 0;
 					draw = true;
 					pc += 2;
 					break;
@@ -350,9 +353,24 @@ void Chip8::execute(){
 			// cout << "Draw Set Up Complete" << endl;
 			break;
 		}
-		//0xExxx
+		//0xExnn
 		case 0xE000:
-			cout << "E000" << endl;
+			switch (opcode & 0x00FF)
+			{
+			//Skip instruction if key in vx register is pressed
+			case 0x009E:
+				if (key[v[(opcode & 0x0F00) >> 8]] != 0) pc += 4;
+				else pc += 2;
+				break;
+			//Skip instruction if key in vx is not pressed
+			case 0x00A1:
+				if (key[v[(opcode & 0x0F00) >> 8]] == 0) pc += 4;
+				else pc += 2;
+				break;
+			default:
+				cerr << "Could Not Recognize Opcode: " << result << endl;
+				break;
+			}
 			break;
 		//0xFxxx
 		case 0xF000:
@@ -365,8 +383,25 @@ void Chip8::execute(){
 				{
 					bool keyPressed = false;
 					
-					cout << "FxxA" << endl;
+
+                    for(int i = 0; i < 16; ++i)
+                    {
+                        if(key[i] != 0)
+                        {
+							//Update Vx register for keypress
+                            v[(opcode & 0x0F00) >> 8] = i;
+                            keyPressed = true;
+                        }
+                    }
+
+                    // If no key is pressed, return and try again.
+                    if(!keyPressed)
+                        return;
+					pc += 2;
 				}
+				case 0x0015:
+					delayTimer = v[(opcode * 0x0F00) >> 8];
+					pc += 2;
 					break;
 				case 0x0018:
 					soundTimer = v[(opcode & 0x0F00) >> 8];
@@ -387,19 +422,19 @@ void Chip8::execute(){
 					pc += 2;
 					break;
 				case 0x0033:
-	                		memory[ind]     = v[(opcode & 0x0F00) >> 8] / 100;
-        	            		memory[ind + 1] = (v[(opcode & 0x0F00) >> 8] / 10) % 10;
-                	    		memory[ind + 2] = v[(opcode & 0x0F00) >> 8] % 10;
-                   	 		pc += 2;
+	        		memory[ind]     = v[(opcode & 0x0F00) >> 8] / 100;
+        	    	memory[ind + 1] = (v[(opcode & 0x0F00) >> 8] / 10) % 10;
+                	memory[ind + 2] = v[(opcode & 0x0F00) >> 8] % 10;
+                   	pc += 2;
 					break;
 				case 0x0055:
 					for (int i = 0; i <= ((opcode & 0x0F00) >> 8); ++i){
-                        			memory[ind + i] = v[i];
+                        memory[ind + i] = v[i];
 					}
-                    			// On the original interpreter, when the
-                    			// operation is done, I = I + X + 1.
-                    			ind += ((opcode & 0x0F00) >> 8) + 1;
-                   			pc += 2;
+                    // On the original interpreter, when the
+        			// operation is done, I = I + X + 1.
+                    ind += ((opcode & 0x0F00) >> 8) + 1;
+           			pc += 2;
 					break;
 				case 0x0065:
 					for(int i = 0; i <= ((opcode & 0x0F00) >> 8); i++){
@@ -417,7 +452,7 @@ void Chip8::execute(){
 			printf("Unknown opcode: 0x%X\n", opcode);			
 			exit(3);
 	}
-	cout << result << " executed" << endl;
+	// cout << result << " executed" << endl;
 }
 
 //Emulate the full ROM
@@ -433,23 +468,23 @@ void Chip8::emulate(){
 		
 		//Run the event loop on the screen
 		screen->eventLoop();
-		cout << "Event Loop Done " << ctr << endl;
+		// cout << "Event Loop Done " << ctr << endl;
 		//Do we need to draw? :)
 		if (draw) {
-			cout << "We Need To Draw: " << ctr << endl;
+			// cout << "We Need To Draw: " << ctr << endl;
 			//yes we do!
-			cout << "DRAW START " << ctr << endl;
+			// cout << "DRAW START " << ctr << endl;
             		for (int i = 0; i < 2048; ++i) {
                 		uint8_t pixel = graphics[i];
           	      		pixels[i] = (0x00FFFFFF * pixel) | 0xFF000000;
             			// cout << pixels[i];
 			}
-			cout << "DRAWING TIME: " << ctr << endl;
+			// cout << "DRAWING TIME: " << ctr << endl;
 			screen->renderSprite(pixels);	
 			draw = false;
 		}
 		std::this_thread::sleep_for(std::chrono::microseconds(1200));
-		cout << "One loop done " << ctr << endl;
+		// cout << "One loop done " << ctr << endl;
 		ctr++;
 	}
 }
