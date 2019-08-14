@@ -315,7 +315,7 @@ void Chip8::execute(){
 		//0xCxkk : Random byte & kk
 		case 0xC000:
 			//masking?
-			v[(opcode * 0x0F00) >> 8] = (rand() % (0xFF + 1))  & (opcode & 0x00FF);
+			v[(opcode & 0x0F00) >> 8] = (rand() % (0xFF + 1))  & (opcode & 0x00FF);
 			pc += 2; 
 			break;
 		//0xDxyh x = x coordinate, y = y coordinate, h = height
@@ -399,8 +399,9 @@ void Chip8::execute(){
                         return;
 					pc += 2;
 				}
+					break;
 				case 0x0015:
-					delayTimer = v[(opcode * 0x0F00) >> 8];
+					delayTimer = v[(opcode & 0x0F00) >> 8];
 					pc += 2;
 					break;
 				case 0x0018:
@@ -418,7 +419,7 @@ void Chip8::execute(){
 					pc += 2;
 					break;
 				case 0x0029:
-					ind = v[(opcode * 0x0F00) >> 8] * 0x5;
+					ind = v[(opcode & 0x0F00) >> 8] * 0x5;
 					pc += 2;
 					break;
 				case 0x0033:
@@ -428,7 +429,7 @@ void Chip8::execute(){
                    	pc += 2;
 					break;
 				case 0x0055:
-					for (int i = 0; i <= ((opcode & 0x0F00) >> 8); ++i){
+					for (int i = 0; i <= ((opcode & 0x0F00) >> 8); i++){
                         memory[ind + i] = v[i];
 					}
                     // On the original interpreter, when the
@@ -445,14 +446,20 @@ void Chip8::execute(){
 			//		cout << "0xFx365 Executed" << endl;
 					break;
 				 default:
-                    			printf ("Unknown opcode [0xF000]: 0x%X\n", opcode);
+                    printf ("Unknown opcode [0xF000]: 0x%X\n", opcode);
 			}	
-		break;
+			break;
 		default:
 			printf("Unknown opcode: 0x%X\n", opcode);			
 			exit(3);
 	}
-	// cout << result << " executed" << endl;
+
+    if (delayTimer > 0)
+        --delayTimer;
+
+    if (soundTimer > 0)
+        if(soundTimer == 1);
+        --soundTimer;
 }
 
 //Emulate the full ROM

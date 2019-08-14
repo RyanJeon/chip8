@@ -2,3 +2,4 @@
 *.swp
 *.ch8
 /include
+.vscode
