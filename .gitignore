@@ -3,3 +3,5 @@
 *.ch8
 /include
 .vscode
+BLINKY
+.DS_STORE
