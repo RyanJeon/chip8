@@ -21,7 +21,6 @@ class Chip8 {
 		
 		Screen *screen;		
 
-		void execute();	
 	
 	public:
 		Chip8();
@@ -31,6 +30,7 @@ class Chip8 {
 		uint8_t  graphics[64 * 32];              // Graphics buffer (64 x 32) display
 		uint8_t  key[16];		
 		void init();				//Initialize CPU
+		void execute();
 		void emulate();
 		void load(const char *path, Screen *s);
 };
