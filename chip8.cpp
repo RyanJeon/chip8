@@ -124,6 +124,11 @@ void Chip8::load(const char *path, Screen *s) {
 
 }
 
+//Given register number, return the value in the register
+uint16_t Chip8::registerValue(uint16_t reg){
+	return v[reg];
+}
+
 //Helper to execute one operation
 void Chip8::execute(){
 	//Opcodes are 2 bytes!

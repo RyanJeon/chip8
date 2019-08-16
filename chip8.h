@@ -33,6 +33,10 @@ class Chip8 {
 		void execute();
 		void emulate();
 		void load(const char *path, Screen *s);
+
+		//Test Helper Methods READ ONLY
+		uint16_t registerValue(uint16_t reg);
+
 };
 
 #endif
