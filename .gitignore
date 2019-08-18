@@ -1,5 +1,6 @@
 *.out
 *.swp
+*.swo
 *.ch8
 /include
 .vscode
